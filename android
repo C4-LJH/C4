@@ -1,0 +1,379 @@
+package com.example.a417.myapplicationex;
+
+import android.support.v7.app.AppCompatActivity;
+import android.os.Bundle;
+import android.util.Log;
+import android.view.View;
+import android.widget.Button;
+import android.widget.CompoundButton;
+import android.widget.Switch;
+import android.widget.TextView;
+import android.widget.Toast;
+import org.eclipse.paho.android.service.MqttAndroidClient;
+import org.eclipse.paho.client.mqttv3.*;
+import org.eclipse.paho.client.mqttv3.IMqttActionListener;
+import org.eclipse.paho.client.mqttv3.IMqttDeliveryToken;
+import org.eclipse.paho.client.mqttv3.IMqttToken;
+import org.eclipse.paho.client.mqttv3.MqttCallbackExtended;
+import org.eclipse.paho.client.mqttv3.MqttClient;
+import org.eclipse.paho.client.mqttv3.MqttConnectOptions;
+import org.eclipse.paho.client.mqttv3.MqttException;
+import org.eclipse.paho.client.mqttv3.MqttMessage;
+import org.eclipse.paho.client.mqttv3.MqttPersistenceException;
+import org.eclipse.paho.client.mqttv3.persist.MemoryPersistence;
+
+import java.io.UnsupportedEncodingException;
+
+public class MainActivity extends AppCompatActivity {
+    String autotopic = "home/auto";
+    String light1topic = "home/light1";
+    String light2topic = "home/light2";
+    String firetopic = "home/fire";
+    String windowtopic = "home/window";
+    Switch auto,light1,light2,fire,window;
+    TextView temperature,humidity,bright;
+    Button button;
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        setContentView(R.layout.activity_main);
+        auto = (Switch) findViewById(R.id.auto);
+        light1 = (Switch) findViewById(R.id.light1);
+        light2 = (Switch) findViewById(R.id.light2);
+        fire = (Switch) findViewById(R.id.fire);
+        window = (Switch) findViewById(R.id.window);
+        button = (Button)findViewById(R.id.button);
+        humidity = (TextView)findViewById(R.id.humidity);
+        temperature = (TextView)findViewById(R.id.temperature);
+        bright = (TextView)findViewById(R.id.bright);
+        String clientId = MqttClient.generateClientId();
+
+        final  MqttAndroidClient client = new MqttAndroidClient(this.getApplicationContext(), "tcp://192.168.0.23:1883", clientId);
+
+        client.setCallback(new MqttCallbackHandler(client));//This is here for when a message is received
+
+        MqttConnectOptions options = new MqttConnectOptions();
+
+        try {
+            options.setUserName("pi");
+            options.setPassword("raspberry".toCharArray());
+            IMqttToken token = client.connect(options);
+
+            token.setActionCallback(new IMqttActionListener() {
+                @Override
+                public void onSuccess(IMqttToken asyncActionToken) {
+                    // We are connected
+                    Log.d("mqtt", "onSuccess");
+//-----------------------------------------------------------------------------------------------
+                    //PUBLISH THE MESSAGE
+                    button.setOnClickListener(new View.OnClickListener(){
+
+                        @Override
+                        public void onClick(View v) {
+                            try{
+                                client.subscribe("c4/bright", 1, new IMqttMessageListener() {
+                                    @Override
+                                    public void messageArrived(String s, MqttMessage mqttMessage) throws Exception {
+                                        bright.setText(new String(mqttMessage.getPayload()));
+                                        Log.d("mqtt", new String(mqttMessage.getPayload()));
+                                    }
+                                });
+                                client.subscribe("c4/temperature", 1, new IMqttMessageListener() {
+                                    @Override
+                                    public void messageArrived(String s, MqttMessage mqttMessage) throws Exception {
+                                        temperature.setText(new String(mqttMessage.getPayload()));
+                                    }
+                                });
+                                client.subscribe("c4/humidity", 1, new IMqttMessageListener() {
+                                    @Override
+                                    public void messageArrived(String s, MqttMessage mqttMessage) throws Exception {
+                                        humidity.setText(new String(mqttMessage.getPayload()));
+                                    }
+                                });
+                            } catch (MqttPersistenceException e) {
+                                e.printStackTrace();
+                            } catch (MqttException e) {
+                                e.printStackTrace();
+                            }
+                        }
+                    });
+                    auto.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+                        @Override
+                        public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
+                            if(isChecked){
+                                // do something when check is selected
+                                MqttMessage message = new MqttMessage("1".getBytes());
+                                message.setQos(2);
+                                message.setRetained(false);
+                                try{
+                                    client.publish(autotopic, message);
+                                } catch (MqttPersistenceException e) {
+                                    e.printStackTrace();
+                                } catch (MqttException e) {
+                                    e.printStackTrace();
+                                }
+
+                            }else {
+                                // do somting when unchecked
+                                MqttMessage message = new MqttMessage("0".getBytes());
+                                message.setQos(2);
+                                message.setRetained(false);
+
+                                try{
+                                    client.publish(autotopic, message);
+                                } catch (MqttPersistenceException e) {
+                                    e.printStackTrace();
+                                } catch (MqttException e) {
+                                    e.printStackTrace();
+                                }
+                            }
+                        }
+                    });
+
+//-----------------------------------------------------------------------------------------------
+                    //PUBLISH THE MESSAGE
+
+                    light1.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+                        @Override
+                        public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
+                            if(isChecked){
+                                // do something when check is selected
+                                MqttMessage message = new MqttMessage("1".getBytes());
+                                message.setQos(2);
+                                message.setRetained(false);
+                                try{
+                                    client.publish(light1topic, message);
+                                } catch (MqttPersistenceException e) {
+                                    e.printStackTrace();
+                                } catch (MqttException e) {
+                                    e.printStackTrace();
+                                }
+
+                            }else {
+                                // do somting when unchecked
+                                MqttMessage message = new MqttMessage("0".getBytes());
+                                message.setQos(2);
+                                message.setRetained(false);
+
+                                try{
+                                    client.publish(light1topic, message);
+                                } catch (MqttPersistenceException e) {
+                                    e.printStackTrace();
+                                } catch (MqttException e) {
+                                    e.printStackTrace();
+                                }
+                            }
+                        }
+                    });
+
+//-----------------------------------------------------------------------------------------------
+                    //PUBLISH THE MESSAGE
+
+                    light2.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+                        @Override
+                        public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
+                            if(isChecked){
+                                // do something when check is selected
+                                MqttMessage message = new MqttMessage("1".getBytes());
+                                message.setQos(2);
+                                message.setRetained(false);
+                                try{
+                                    client.publish(light2topic, message);
+                                } catch (MqttPersistenceException e) {
+                                    e.printStackTrace();
+                                } catch (MqttException e) {
+                                    e.printStackTrace();
+                                }
+
+                            }else {
+                                // do somting when unchecked
+                                MqttMessage message = new MqttMessage("0".getBytes());
+                                message.setQos(2);
+                                message.setRetained(false);
+
+                                try{
+                                    client.publish(light2topic, message);
+                                } catch (MqttPersistenceException e) {
+                                    e.printStackTrace();
+                                } catch (MqttException e) {
+                                    e.printStackTrace();
+                                }
+                            }
+                        }
+                    });
+
+//-----------------------------------------------------------------------------------------------
+
+                    fire.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+                        @Override
+                        public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
+                            if(isChecked){
+                                // do something when check is selected
+                                MqttMessage message = new MqttMessage("1".getBytes());
+                                message.setQos(2);
+                                message.setRetained(false);
+                                try{
+                                    client.publish(firetopic, message);
+                                } catch (MqttPersistenceException e) {
+                                    e.printStackTrace();
+                                } catch (MqttException e) {
+                                    e.printStackTrace();
+                                }
+
+                            }else {
+                                // do somting when unchecked
+                                MqttMessage message = new MqttMessage("0".getBytes());
+                                message.setQos(2);
+                                message.setRetained(false);
+
+                                try{
+                                    client.publish(firetopic, message);
+                                } catch (MqttPersistenceException e) {
+                                    e.printStackTrace();
+                                } catch (MqttException e) {
+                                    e.printStackTrace();
+                                }
+                            }
+                        }
+                    });
+
+//-----------------------------------------------------------------------------------------------
+
+                    window.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+                        @Override
+                        public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
+                            if(isChecked){
+                                // do something when check is selected
+                                MqttMessage message = new MqttMessage("1".getBytes());
+                                message.setQos(2);
+                                message.setRetained(false);
+                                try{
+                                    client.publish(windowtopic, message);
+                                } catch (MqttPersistenceException e) {
+                                    e.printStackTrace();
+                                } catch (MqttException e) {
+                                    e.printStackTrace();
+                                }
+
+                            }else {
+                                // do somting when unchecked
+                                MqttMessage message = new MqttMessage("0".getBytes());
+                                message.setQos(2);
+                                message.setRetained(false);
+
+                                try{
+                                    client.publish(windowtopic, message);
+                                } catch (MqttPersistenceException e) {
+                                    e.printStackTrace();
+                                } catch (MqttException e) {
+                                    e.printStackTrace();
+                                }
+                            }
+                        }
+                    });
+
+//-----------------------------------------------------------------------------------------------
+                    String subtopic  = "tester";
+                    int qos = 1;
+                    try {
+                        IMqttToken subToken = client.subscribe(subtopic, qos);
+                        subToken.setActionCallback(new IMqttActionListener() {
+                            @Override
+                            public void onSuccess(IMqttToken asyncActionToken) {
+                                // The message was published
+                                Log.i("mqtt", "subscription success");
+                            }
+
+                            @Override
+                            public void onFailure(IMqttToken asyncActionToken,
+                                                  Throwable exception) {
+                                // The subscription could not be performed, maybe the user was not
+                                // authorized to subscribe on the specified topic e.g. using wildcards
+                                Log.i("mqtt", "subscription failed");
+
+                            }
+                        });
+
+
+
+                    } catch (MqttException e) {
+                        e.printStackTrace();
+                    }
+
+//---------------------------------------------------------------------------
+
+                }
+
+                @Override
+                public void onFailure(IMqttToken asyncActionToken, Throwable exception) {
+                    // Something went wrong e.g. connection timeout or firewall problems
+                    Log.d("mqtt", "onFailure");
+
+                }
+
+            });
+
+
+        } catch (MqttException e) {
+            e.printStackTrace();
+        }
+
+    }
+
+
+}//End of Activity class
+
+//-----------------------------------------------------------------------------
+
+class MqttCallbackHandler implements MqttCallbackExtended {
+
+    private final MqttAndroidClient client;
+
+    public MqttCallbackHandler (MqttAndroidClient client)
+    {
+        this.client=client;
+    }
+
+    @Override
+    public void connectComplete(boolean b, String s) {
+        Log.w("mqtt", s);
+    }
+
+    @Override
+    public void connectionLost(Throwable throwable) {
+
+    }
+
+   /*public void AlarmActivatedMessageReceived()
+    {
+        MqttMessage msg= new MqttMessage("Hello, the Mosquitto Broker got your message saying that the Alarm is Activated.".getBytes());
+        try {
+            this.client.publish("Fitlet", msg);
+            Log.i("mqtt", "Message published");
+
+        } catch (MqttPersistenceException e) {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
+
+        } catch (MqttException e) {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
+        }
+    }
+*/
+    @Override
+    public void messageArrived(String topic, MqttMessage mqttMessage) throws Exception {
+        Log.w("mqtt", mqttMessage.toString());
+
+        if (mqttMessage.toString().contains("Alarm Activated"))
+        {
+           // AlarmActivatedMessageReceived();
+        }
+
+    }
+
+    @Override
+    public void deliveryComplete(IMqttDeliveryToken iMqttDeliveryToken) {
+
+    }
+}
